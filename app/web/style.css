@@ -13,13 +13,12 @@
   --bad:#9e1f22;         --bad-soft:#fbe4e3;
   --free:#f3f1ed;        --gapfill:#fbe2dd;   --gapline:#cf8578;
   --cell-l:96%; --cell-s:60%; --edge-l:60%; --edge-s:50%;
-  /* Sections are drawn by their border, not by a filled panel.  One token
-     decides it: `transparent` is the flat look, and a faint tint here — say
-     #fdfcfb — brings the panels back a step without touching twenty rules.
-     `--panel` stays solid and is reserved for what genuinely floats over
-     content (the menu, the toasts, a sticky table header), because a
-     see-through surface with text scrolling under it cannot be read. */
-  --surface:transparent;
+  /* What a section is filled with.  One token, resolved where it is used,
+     so pointing it at `--panel` follows both themes without a copy in each
+     — and `transparent` here is still the whole flat look, one word away.
+     Nested blocks use `--panel-2` instead: a note inside a panel has to be
+     a shade off it or the two read as one surface. */
+  --surface:var(--panel);
   --r1:8px; --r2:12px; --r3:18px;
   --sh1:0 1px 1px rgba(30,25,15,.035), 0 2px 5px rgba(30,25,15,.045);
   --sh2:0 2px 5px rgba(30,25,15,.05), 0 12px 30px rgba(30,25,15,.08);
@@ -37,7 +36,6 @@
   --bad:#ff958c;         --bad-soft:#391d1d;
   --free:#191821;        --gapfill:#3a2123;   --gapline:#8f4f49;
   --cell-l:18%; --cell-s:28%; --edge-l:56%; --edge-s:44%;
-  --surface:transparent;
   --sh1:0 1px 1px rgba(0,0,0,.3), 0 2px 5px rgba(0,0,0,.25);
   --sh2:0 2px 5px rgba(0,0,0,.3), 0 12px 30px rgba(0,0,0,.4);
   --sh3:0 8px 24px rgba(0,0,0,.45), 0 30px 70px rgba(0,0,0,.55);
@@ -53,7 +51,6 @@
   --bad:#ff958c;         --bad-soft:#391d1d;
   --free:#191821;        --gapfill:#3a2123;   --gapline:#8f4f49;
   --cell-l:18%; --cell-s:28%; --edge-l:56%; --edge-s:44%;
-  --surface:transparent;
   --sh1:0 1px 1px rgba(0,0,0,.3), 0 2px 5px rgba(0,0,0,.25);
   --sh2:0 2px 5px rgba(0,0,0,.3), 0 12px 30px rgba(0,0,0,.4);
   --sh3:0 8px 24px rgba(0,0,0,.45), 0 30px 70px rgba(0,0,0,.55);
@@ -187,7 +184,7 @@ label.inline>input,label.inline>select{width:auto;margin:0}
   display:flex;flex-direction:column;gap:14px;position:sticky;top:0;
   height:100vh;overflow:auto;overscroll-behavior:contain}
 #rail>.brand{padding:2px 5px 0}
-#stage{flex:1;min-width:0;padding:22px 26px 40px;max-width:1620px}
+#stage{flex:1;min-width:0;padding:24px 30px 44px;max-width:1620px}
 .page-head{display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap;
   padding-bottom:14px;margin-bottom:16px;border-bottom:1px solid var(--line)}
 .page-head h1{margin-bottom:3px}
@@ -251,29 +248,29 @@ label.inline>input,label.inline>select{width:auto;margin:0}
 }
 
 /* ========================================================== containers == */
-.cols{display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap}
+.cols{display:flex;gap:22px;align-items:flex-start;flex-wrap:wrap}
 .col{flex:1 1 400px;min-width:300px}
 .col.wide{flex:3 1 620px}
 .col.side{flex:1 1 330px;max-width:430px;position:sticky;top:20px}
 .panel{background:var(--surface);border:1px solid var(--line);
-  border-radius:var(--r2);padding:16px 18px;margin:0 0 14px}
+  border-radius:var(--r2);padding:20px 22px;margin:0 0 16px}
 .panel>b:first-child{display:block;margin-bottom:3px;font-size:14.5px}
-.list{display:flex;flex-direction:column;gap:9px}
+.list{display:flex;flex-direction:column;gap:10px}
 .card{background:var(--surface);border:1px solid var(--line);
-  border-radius:var(--r2);padding:13px 16px;display:flex;gap:12px;
+  border-radius:var(--r2);padding:16px 18px;display:flex;gap:12px;
   align-items:center;transition:border-color .14s}
 .card:hover{border-color:var(--line-2)}
 .card b{display:block;font-size:14.5px}
 .card small{color:var(--muted);font-size:12.5px}
 .card.on{border-color:var(--accent);
   box-shadow:0 0 0 3px var(--accent-soft),var(--sh1)}
-.empty{color:var(--muted);font-size:13.5px;padding:34px 20px;
+.empty{color:var(--muted);font-size:13.5px;padding:38px 24px;
   border:1px dashed var(--line-2);border-radius:var(--r2);text-align:center;
   background:var(--surface)}
 .empty b{display:block;color:var(--fg);margin-bottom:5px;font-size:15px}
 .drop{border:2px dashed var(--line-2);border-radius:var(--r2);
   padding:24px 18px;text-align:center;cursor:pointer;
-  background:var(--surface);display:block;
+  background:var(--panel-2);display:block;
   transition:border-color .15s,background .15s;
   font-weight:500;color:var(--fg-2)}
 .drop:hover,.drop.over{border-color:var(--accent);background:var(--accent-soft)}
@@ -286,9 +283,9 @@ label.inline>input,label.inline>select{width:auto;margin:0}
   width:2px;height:12px;background:currentColor;transform:translateX(-50%)}
 
 /* =========================================================== messages === */
-.note{border-radius:var(--r1);padding:10px 13px;margin:8px 0;font-size:13.5px;
+.note{border-radius:var(--r1);padding:11px 14px;margin:9px 0;font-size:13.5px;
   border:1px solid var(--line);border-inline-start:3px solid var(--line-2);
-  background:var(--surface);color:var(--fg-2)}
+  background:var(--panel-2);color:var(--fg-2)}
 .note b{display:block;color:var(--fg);font-weight:650;margin-bottom:1px}
 .note.ok{border-inline-start-color:var(--ok);background:var(--ok-soft)}
 .note.warn{border-inline-start-color:var(--warn);background:var(--warn-soft)}
@@ -312,8 +309,8 @@ label.inline>input,label.inline>select{width:auto;margin:0}
 /* ========================================================== overview ==== */
 .hero{display:flex;gap:20px;align-items:center;flex-wrap:wrap;
   background:var(--surface);border:1px solid var(--line);
-  border-radius:var(--r3);padding:22px 24px;
-  margin-bottom:16px;position:relative;overflow:hidden}
+  border-radius:var(--r3);padding:26px 28px;
+  margin-bottom:18px;position:relative;overflow:hidden}
 .hero::before{content:"";position:absolute;inset-block:0;inset-inline-end:0;
   width:5px;background:var(--accent)}
 .hero.bad::before{background:var(--bad)}
@@ -328,9 +325,9 @@ label.inline>input,label.inline>select{width:auto;margin:0}
 .status.idle{background:var(--sunk);color:var(--muted)}
 .status::before{content:"";width:7px;height:7px;border-radius:50%;
   background:currentColor}
-.steps{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+.steps{display:flex;gap:11px;flex-wrap:wrap;margin-bottom:18px}
 .step{flex:1 1 190px;display:flex;gap:11px;align-items:flex-start;
-  text-align:start;justify-content:flex-start;padding:13px 15px;
+  text-align:start;justify-content:flex-start;padding:15px 17px;
   background:var(--surface);border:1px solid var(--line);
   border-radius:var(--r2);cursor:pointer}
 .step:hover{border-color:var(--accent);color:var(--fg)}
@@ -345,10 +342,10 @@ label.inline>input,label.inline>select{width:auto;margin:0}
 .step.now .num{background:var(--accent);color:var(--accent-ink)}
 .step.later{opacity:.6}
 
-.stats{display:grid;gap:12px;margin-bottom:16px;
+.stats{display:grid;gap:13px;margin-bottom:18px;
   grid-template-columns:repeat(auto-fit,minmax(148px,1fr))}
 .stat{background:var(--surface);border:1px solid var(--line);
-  border-radius:var(--r2);padding:13px 15px}
+  border-radius:var(--r2);padding:16px 18px}
 .stat b{display:block;font-size:25px;font-weight:720;letter-spacing:-.03em;
   font-variant-numeric:tabular-nums;line-height:1.15}
 .stat span{color:var(--muted);font-size:12px}
@@ -358,9 +355,9 @@ label.inline>input,label.inline>select{width:auto;margin:0}
 
 /* ======================================================== constraints === */
 details.group,details.entity{border:1px solid var(--line);
-  border-radius:var(--r2);margin:0 0 11px;background:var(--surface);
+  border-radius:var(--r2);margin:0 0 14px;background:var(--surface);
   overflow:hidden}
-details>summary{padding:13px 16px;cursor:pointer;font-weight:650;
+details>summary{padding:14px 18px;cursor:pointer;font-weight:650;
   display:flex;gap:10px;align-items:center;list-style:none}
 details>summary::-webkit-details-marker{display:none}
 details>summary:hover{background:var(--panel-2)}
@@ -371,7 +368,7 @@ details[open]>summary::before{transform:rotate(-90deg)}
 details.group>summary{border-bottom:1px solid var(--line)}
 details.entity>summary .meta{color:var(--muted);font-weight:400;
   font-size:12.5px;margin-inline-start:auto;text-align:end}
-.rule{border-top:1px solid var(--line);padding:14px 17px}
+.rule{border-top:1px solid var(--line);padding:16px 19px}
 .rule:hover{background:var(--panel-2)}
 .rule .head{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
 .rule .head>b{flex:1;min-width:190px;font-size:14px}
@@ -451,7 +448,7 @@ td.target{box-shadow:inset 0 0 0 2px var(--accent)}
 /* ========================================================== inspector == */
 .opt{display:flex;gap:10px;align-items:center;padding:9px 11px;
   border:1px solid var(--line);border-radius:var(--r1);margin:6px 0;
-  font-size:13px;background:var(--surface)}
+  font-size:13px;background:var(--panel-2)}
 .opt:hover{border-color:var(--accent-2)}
 .opt b{font-weight:650}
 .opt small{color:var(--muted);display:block;font-size:11.5px;margin-top:1px}
@@ -481,7 +478,7 @@ table.kv tbody tr:hover{background:var(--panel-2)}
 table.kv td.num{text-align:end;font-variant-numeric:tabular-nums}
 .scroll{overflow-x:auto;overscroll-behavior:contain;
   border:1px solid var(--line);border-radius:var(--r2);
-  background:var(--surface);padding:2px 12px 8px}
+  background:var(--surface);padding:4px 16px 10px}
 /* The section list is a reference, not six announcements: a term and the
    line that explains it, so the whole set reads in one glance. */
 .help-item{padding:7px 0;border-top:1px solid var(--line);font-size:12.5px;
@@ -490,7 +487,7 @@ table.kv td.num{text-align:end;font-variant-numeric:tabular-nums}
 .help-item b{display:block;color:var(--fg);font-weight:650;font-size:13px;
   font-family:ui-monospace,Consolas,monospace}
 
-pre.sample{background:var(--surface);border:1px solid var(--line);
+pre.sample{background:var(--panel-2);border:1px solid var(--line);
   border-radius:var(--r1);padding:13px;overflow:auto;font-size:11.5px;
   overscroll-behavior:contain;
   max-height:420px;line-height:1.7;margin:8px 0 0;
