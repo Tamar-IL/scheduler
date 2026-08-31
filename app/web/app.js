@@ -1378,8 +1378,9 @@ async function loadHelp() {
   const box = $("#format-help");
   box.textContent = "";
   for (const c of help.columns) {
-    box.append(el("div", { class: "note" },
-      el("b", {}, c.section === "איך מסמנים טבלה" ? c.section : "## " + c.section),
+    box.append(el("div", { class: "help-item" },
+      el("b", {},
+         c.section === "איך מסמנים טבלה" ? c.section : "## " + c.section),
       c.text));
   }
   $("#sample").textContent = SAMPLE;
