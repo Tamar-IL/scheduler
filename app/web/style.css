@@ -482,12 +482,8 @@ table.kv td.num{text-align:end;font-variant-numeric:tabular-nums}
 .scroll{overflow-x:auto;overscroll-behavior:contain;
   border:1px solid var(--line);border-radius:var(--r2);
   background:var(--surface);padding:2px 12px 8px}
-.pair{display:flex;gap:18px;flex-wrap:wrap;margin-top:10px}
-.pair>*{flex:1 1 250px;min-width:0}
-.pair h3{margin:0 0 7px}
-
-/* The section list is a reference, not six announcements: a term and its
-   line, close enough together that the example beside it stays in view. */
+/* The section list is a reference, not six announcements: a term and the
+   line that explains it, so the whole set reads in one glance. */
 .help-item{padding:7px 0;border-top:1px solid var(--line);font-size:12.5px;
   color:var(--muted);line-height:1.6}
 .help-item:first-child{border-top:0;padding-top:0}
@@ -497,7 +493,7 @@ table.kv td.num{text-align:end;font-variant-numeric:tabular-nums}
 pre.sample{background:var(--surface);border:1px solid var(--line);
   border-radius:var(--r1);padding:13px;overflow:auto;font-size:11.5px;
   overscroll-behavior:contain;
-  max-height:420px;line-height:1.7;margin:0;
+  max-height:420px;line-height:1.7;margin:8px 0 0;
   font-family:ui-monospace,Consolas,monospace;direction:ltr;text-align:start}
 .bar-track{background:var(--sunk);border-radius:999px;height:8px;
   overflow:hidden;margin:12px 0 7px}
