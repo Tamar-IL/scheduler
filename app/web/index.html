@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>מערכת שעות</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+<!-- =================================================== sign in / register -->
+<div id="auth" class="auth hidden">
+  <section class="auth-side">
+    <div class="brand big"><span class="mark">ש</span><b>מערכת שעות</b></div>
+    <h2>מערכת שעות שלמה, מנומקת, ושלך.</h2>
+    <ul class="sell">
+      <li><b>העלאה</b> — קובץ Word, Excel או CSV עם המורות, הכיתות והשיעורים.</li>
+      <li><b>בנייה</b> — מנוע אילוצים שמוכיח מה אפשרי, לא מנחש.</li>
+      <li><b>עריכה</b> — כל שינוי נבדק מול השבוע כולו, ומוסבר.</li>
+      <li><b>ייצוא</b> — Word לעריכה, ו-Word סופי להפצה.</li>
+    </ul>
+    <p class="fine">הנתונים נשמרים על המחשב שבו רץ השרת, בתיקייה אחת לכל
+      חשבון. אין שליחה לשום מקום.</p>
+  </section>
+
+  <section class="auth-main">
+    <div class="auth-card">
+      <h1 id="auth-title">כניסה לחשבון</h1>
+      <p class="lead" id="auth-sub">כדי לשמור את מערכות השעות שלך.</p>
+      <form id="auth-form" autocomplete="on">
+        <label id="auth-display-row" class="hidden">שם לתצוגה
+          <input name="display" autocomplete="name"
+                 placeholder="לדוגמה: רחל, מנהלת"></label>
+        <label>שם משתמש
+          <input name="username" autocomplete="username" required
+                 autocapitalize="off" spellcheck="false"></label>
+        <label>סיסמה
+          <input name="password" type="password" required
+                 autocomplete="current-password"></label>
+        <div id="auth-error"></div>
+        <button type="submit" class="primary block" id="auth-submit">
+          כניסה</button>
+      </form>
+      <p class="switch-line">
+        <span id="auth-switch-text">אין לך עדיין חשבון?</span>
+        <button type="button" class="link" id="auth-switch">הרשמה</button>
+      </p>
+    </div>
+  </section>
+</div>
+
+<!-- ============================================================ the app -->
+<div id="app" class="hidden">
+  <aside id="rail">
+    <div class="brand"><span class="mark">ש</span><b>מערכת שעות</b></div>
+
+    <div class="switcher">
+      <button id="switcher-btn" class="switcher-btn">
+        <span class="grow">
+          <b id="switcher-name">לא נבחר בית ספר</b>
+          <small id="switcher-meta"></small>
+        </span>
+        <span class="caret"></span>
+      </button>
+      <div id="switcher-menu" class="menu hidden"></div>
+    </div>
+
+    <nav id="nav"></nav>
+
+    <div class="rail-foot">
+      <div id="user-chip" class="user-chip hidden">
+        <span class="avatar" id="user-initial"></span>
+        <span class="grow"><b id="user-name"></b><small>מחובר</small></span>
+        <button id="logout" class="ghost icon" title="יציאה"></button>
+      </div>
+      <button id="theme" class="ghost icon"></button>
+    </div>
+  </aside>
+
+  <div id="stage">
+    <header class="page-head">
+      <div class="grow">
+        <h1 id="page-title"></h1>
+        <p class="lead" id="page-sub"></p>
+      </div>
+      <div class="row" id="page-actions"></div>
+    </header>
+
+    <div id="page">
+      <!-- ------------------------------------------------------ overview -->
+      <section id="tab-overview" class="tab"><div id="overview"></div></section>
+
+      <!-- ---------------------------------------------------------- data -->
+      <section id="tab-schools" class="tab">
+        <div class="cols">
+          <div class="col">
+            <form id="import-form" class="panel">
+              <b>קבצים חדשים</b>
+              <p class="lead">שני קבצים: הראשון עם המורות, הכיתות והשיעורים;
+                השני עם הימים והשעות שבהם מורה אינה זמינה. אפשר גם קובץ אחד
+                שמכיל את הכול.</p>
+              <div class="row">
+                <label class="grow">שם בית הספר
+                  <input name="name" placeholder="לדוגמה: בית ספר בנות"></label>
+                <label style="flex:0 0 130px">שנה
+                  <input name="year" placeholder="תשפ״ז"></label>
+              </div>
+              <label class="drop" id="drop">
+                <input type="file" name="files" multiple
+                       accept=".csv,.xlsx,.docx,.json,.txt">
+                <span class="drop-icon"></span>
+                <span>גרירת קבצים לכאן, או לחיצה לבחירה</span>
+                <em id="file-list">Word · Excel · CSV · גיבוי JSON</em>
+              </label>
+              <div class="row">
+                <button type="submit" class="primary">העלאה וניתוח</button>
+                <button type="button" id="load-demo">בית ספר לדוגמה</button>
+                <a class="btn" href="/download/template">הורדת קבצי דוגמה</a>
+              </div>
+            </form>
+            <div id="import-report"></div>
+            <h3>בתי הספר שלי</h3>
+            <div id="school-list" class="list"></div>
+          </div>
+
+          <div class="col">
+            <div class="panel">
+              <b>מבנה הקובץ</b>
+              <p class="lead">שמות העמודות הם מה שקובע — הסדר אינו חשוב,
+                ועמודה שאינה רלוונטית אפשר להשמיט.</p>
+              <div id="format-help"></div>
+            </div>
+            <div class="panel">
+              <b>דוגמה (CSV)</b>
+              <pre class="sample" id="sample"></pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- --------------------------------------------------- constraints -->
+      <section id="tab-constraints" class="tab">
+        <div class="row">
+          <button id="expand-all-c" class="ghost">פתיחת הכול</button>
+          <button id="collapse-all-c" class="ghost">סגירת הכול</button>
+          <span class="grow"></span>
+          <label class="inline"><input type="checkbox" id="only-active">
+            רק אילוצים שחלים על בית ספר זה</label>
+        </div>
+        <div id="constraint-groups"></div>
+      </section>
+
+      <!-- ----------------------------------------------------- timetable -->
+      <section id="tab-timetable" class="tab">
+        <div class="toolbar">
+          <div class="seg">
+            <button data-view="class" class="on">לפי כיתה</button>
+            <button data-view="teacher">לפי מורה</button>
+          </div>
+          <input id="filter" placeholder="סינון…">
+          <button id="expand-all" class="ghost">פתיחת הכול</button>
+          <button id="collapse-all" class="ghost">סגירת הכול</button>
+          <span class="grow"></span>
+          <span id="score" class="score"></span>
+        </div>
+        <div class="legend">
+          <span><i class="l-lesson"></i>שיעור — צבע לפי מקצוע</span>
+          <span><i class="l-free"></i>שעה פנויה</span>
+          <span><i class="l-gap"></i>חלון של המורה</span>
+          <span><i class="l-out"></i>שעה שאינה קיימת ביום זה</span>
+          <span class="hint">גרירה מעבירה שיעור · נפילה על תא תפוס מחליפה
+            ביניהם</span>
+        </div>
+        <div id="build-panel" class="panel hidden"></div>
+        <div id="edit-flash"></div>
+        <div class="cols">
+          <div class="col wide" id="grids"></div>
+          <aside class="col side" id="inspector"></aside>
+        </div>
+      </section>
+
+      <!-- ------------------------------------------------------- quality -->
+      <section id="tab-quality" class="tab"><div id="quality"></div></section>
+
+      <!-- -------------------------------------------------------- export -->
+      <section id="tab-export" class="tab"><div id="export"></div></section>
+
+      <!-- ------------------------------------------------------ settings -->
+      <section id="tab-account" class="tab"><div id="account"></div></section>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+<script src="/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+# Account files: password hashes and live session tokens.  Never committed.
+data/
+*.tmp
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Scratch
+.DS_Store
+Thumbs.db
