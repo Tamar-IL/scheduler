@@ -5,7 +5,7 @@
 :root{
   --bg:#f6f5f2;          --sunk:#eceae4;      --panel:#fff;  --panel-2:#faf9f7;
   --fg:#191816;          --fg-2:#4b4842;      --muted:#7d7970;
-  --line:#e6e2da;        --line-2:#d4cfc4;
+  --line:#ded9cf;        --line-2:#cbc5b8;
   --accent:#4f3fd0;      --accent-2:#7b6bf5;  --accent-soft:#ece9fd;
   --accent-ink:#fff;
   --ok:#0f6b41;          --ok-soft:#e0f2e8;
@@ -13,6 +13,13 @@
   --bad:#9e1f22;         --bad-soft:#fbe4e3;
   --free:#f3f1ed;        --gapfill:#fbe2dd;   --gapline:#cf8578;
   --cell-l:96%; --cell-s:60%; --edge-l:60%; --edge-s:50%;
+  /* Sections are drawn by their border, not by a filled panel.  One token
+     decides it: `transparent` is the flat look, and a faint tint here — say
+     #fdfcfb — brings the panels back a step without touching twenty rules.
+     `--panel` stays solid and is reserved for what genuinely floats over
+     content (the menu, the toasts, a sticky table header), because a
+     see-through surface with text scrolling under it cannot be read. */
+  --surface:transparent;
   --r1:8px; --r2:12px; --r3:18px;
   --sh1:0 1px 1px rgba(30,25,15,.035), 0 2px 5px rgba(30,25,15,.045);
   --sh2:0 2px 5px rgba(30,25,15,.05), 0 12px 30px rgba(30,25,15,.08);
@@ -22,7 +29,7 @@
 @media (prefers-color-scheme:dark){:root:not([data-theme=light]){
   --bg:#121118;          --sunk:#0d0c12;      --panel:#1b1a22; --panel-2:#211f2a;
   --fg:#f0eef5;          --fg-2:#cbc7d5;      --muted:#928da1;
-  --line:#2e2c38;        --line-2:#403d4d;
+  --line:#35323f;        --line-2:#474354;
   --accent:#a08fff;      --accent-2:#c0b3ff;  --accent-soft:#272040;
   --accent-ink:#17142a;
   --ok:#5fd49b;          --ok-soft:#132e1f;
@@ -30,6 +37,7 @@
   --bad:#ff958c;         --bad-soft:#391d1d;
   --free:#191821;        --gapfill:#3a2123;   --gapline:#8f4f49;
   --cell-l:18%; --cell-s:28%; --edge-l:56%; --edge-s:44%;
+  --surface:transparent;
   --sh1:0 1px 1px rgba(0,0,0,.3), 0 2px 5px rgba(0,0,0,.25);
   --sh2:0 2px 5px rgba(0,0,0,.3), 0 12px 30px rgba(0,0,0,.4);
   --sh3:0 8px 24px rgba(0,0,0,.45), 0 30px 70px rgba(0,0,0,.55);
@@ -37,7 +45,7 @@
 :root[data-theme=dark]{
   --bg:#121118;          --sunk:#0d0c12;      --panel:#1b1a22; --panel-2:#211f2a;
   --fg:#f0eef5;          --fg-2:#cbc7d5;      --muted:#928da1;
-  --line:#2e2c38;        --line-2:#403d4d;
+  --line:#35323f;        --line-2:#474354;
   --accent:#a08fff;      --accent-2:#c0b3ff;  --accent-soft:#272040;
   --accent-ink:#17142a;
   --ok:#5fd49b;          --ok-soft:#132e1f;
@@ -45,6 +53,7 @@
   --bad:#ff958c;         --bad-soft:#391d1d;
   --free:#191821;        --gapfill:#3a2123;   --gapline:#8f4f49;
   --cell-l:18%; --cell-s:28%; --edge-l:56%; --edge-s:44%;
+  --surface:transparent;
   --sh1:0 1px 1px rgba(0,0,0,.3), 0 2px 5px rgba(0,0,0,.25);
   --sh2:0 2px 5px rgba(0,0,0,.3), 0 12px 30px rgba(0,0,0,.4);
   --sh3:0 8px 24px rgba(0,0,0,.45), 0 30px 70px rgba(0,0,0,.55);
@@ -71,12 +80,13 @@ a{color:var(--accent);text-underline-offset:3px}
 
 /* ============================================================ controls == */
 button,.btn{font:inherit;font-weight:500;padding:8px 15px;
-  border:1px solid var(--line-2);background:var(--panel);color:var(--fg);
+  border:1px solid var(--line-2);background:var(--surface);color:var(--fg);
   border-radius:var(--r1);cursor:pointer;text-decoration:none;
   display:inline-flex;align-items:center;justify-content:center;gap:7px;
-  white-space:nowrap;box-shadow:var(--sh1);
+  white-space:nowrap;
   transition:border-color .13s,color .13s,background .13s,transform .07s}
-button:hover,.btn:hover{border-color:var(--accent);color:var(--accent)}
+button:hover,.btn:hover{border-color:var(--accent);color:var(--accent);
+  background:var(--accent-soft)}
 button:active,.btn:active{transform:translateY(1px)}
 button:focus-visible,.btn:focus-visible,input:focus-visible,
 select:focus-visible,summary:focus-visible{outline:2px solid var(--accent);
@@ -98,11 +108,10 @@ button.danger:hover{border-color:var(--bad);color:var(--bad);
   gap:2px}
 .seg button{border:0;box-shadow:none;background:none;color:var(--muted);
   border-radius:7px;padding:5px 14px}
-.seg button.on{background:var(--panel);color:var(--accent);font-weight:650;
-  box-shadow:var(--sh1)}
+.seg button.on{background:var(--panel);color:var(--accent);font-weight:650}
 input,select,textarea{font:inherit;padding:8px 11px;
   border:1px solid var(--line-2);border-radius:var(--r1);
-  background:var(--panel);color:var(--fg);width:100%}
+  background:var(--surface);color:var(--fg);width:100%}
 input[type=checkbox]{width:16px;height:16px;accent-color:var(--accent)}
 input::placeholder{color:var(--muted)}
 label{display:block;margin:11px 0;font-size:12.5px;color:var(--muted);
@@ -130,9 +139,9 @@ label.inline>input,label.inline>select{width:auto;margin:0}
   width:7px;height:7px;border-radius:2px;background:currentColor;opacity:.6}
 .sell b{opacity:1;font-weight:700}
 .auth-main{flex:1 1 58%;display:grid;place-items:center;padding:30px}
-.auth-card{width:min(400px,100%);background:var(--panel);
-  border:1px solid var(--line);border-radius:var(--r3);padding:30px 30px 24px;
-  box-shadow:var(--sh3)}
+.auth-card{width:min(400px,100%);background:var(--surface);
+  border:1px solid var(--line-2);border-radius:var(--r3);
+  padding:30px 30px 24px}
 .auth-card h1{font-size:21px;margin-bottom:3px}
 .auth-card form{margin-top:14px}
 .switch-line{margin-top:16px;font-size:13px;color:var(--muted);
@@ -148,7 +157,7 @@ label.inline>input,label.inline>select{width:auto;margin:0}
 
 /* ============================================================== shell === */
 #app{display:flex;min-height:100vh;align-items:stretch}
-#rail{width:var(--rail);flex:none;background:var(--panel);
+#rail{width:var(--rail);flex:none;background:var(--surface);
   border-inline-end:1px solid var(--line);padding:16px 13px;
   display:flex;flex-direction:column;gap:14px;position:sticky;top:0;
   height:100vh;overflow:auto}
@@ -163,8 +172,7 @@ label.inline>input,label.inline>select{width:auto;margin:0}
 
 .switcher{position:relative}
 .switcher-btn{width:100%;justify-content:flex-start;text-align:start;
-  background:var(--sunk);border-color:transparent;box-shadow:none;
-  padding:9px 11px;gap:8px}
+  background:var(--surface);border-color:var(--line);padding:9px 11px;gap:8px}
 .switcher-btn b{display:block;font-size:13.5px;overflow:hidden;
   text-overflow:ellipsis;white-space:nowrap}
 .switcher-btn small{display:block;color:var(--muted);font-size:11.5px}
@@ -195,10 +203,10 @@ label.inline>input,label.inline>select{width:auto;margin:0}
 #nav .badge.ok{background:var(--ok)}
 .rail-foot{display:flex;align-items:center;gap:8px;
   border-top:1px solid var(--line);padding-top:11px}
-.rail-foot>#theme{flex:none;background:var(--sunk);border-color:transparent}
+.rail-foot>#theme{flex:none;border-color:var(--line)}
 .rail-foot>#theme:hover{background:var(--accent-soft)}
 .user-chip{display:flex;flex:1;min-width:0;align-items:center;gap:9px;
-  padding:6px 8px;border-radius:var(--r1);background:var(--sunk)}
+  padding:6px 8px;border-radius:var(--r1);border:1px solid var(--line)}
 .user-chip b{display:block;font-size:13px;overflow:hidden;
   text-overflow:ellipsis;white-space:nowrap}
 .user-chip small{color:var(--muted);font-size:11px}
@@ -222,26 +230,26 @@ label.inline>input,label.inline>select{width:auto;margin:0}
 .col{flex:1 1 400px;min-width:300px}
 .col.wide{flex:3 1 620px}
 .col.side{flex:1 1 330px;max-width:430px;position:sticky;top:20px}
-.panel{background:var(--panel);border:1px solid var(--line);
-  border-radius:var(--r2);padding:16px 18px;margin:0 0 14px;
-  box-shadow:var(--sh1)}
+.panel{background:var(--surface);border:1px solid var(--line);
+  border-radius:var(--r2);padding:16px 18px;margin:0 0 14px}
 .panel>b:first-child{display:block;margin-bottom:3px;font-size:14.5px}
 .list{display:flex;flex-direction:column;gap:9px}
-.card{background:var(--panel);border:1px solid var(--line);
+.card{background:var(--surface);border:1px solid var(--line);
   border-radius:var(--r2);padding:13px 16px;display:flex;gap:12px;
-  align-items:center;box-shadow:var(--sh1);transition:box-shadow .14s}
-.card:hover{box-shadow:var(--sh2)}
+  align-items:center;transition:border-color .14s}
+.card:hover{border-color:var(--line-2)}
 .card b{display:block;font-size:14.5px}
 .card small{color:var(--muted);font-size:12.5px}
 .card.on{border-color:var(--accent);
   box-shadow:0 0 0 3px var(--accent-soft),var(--sh1)}
 .empty{color:var(--muted);font-size:13.5px;padding:34px 20px;
   border:1px dashed var(--line-2);border-radius:var(--r2);text-align:center;
-  background:var(--panel-2)}
+  background:var(--surface)}
 .empty b{display:block;color:var(--fg);margin-bottom:5px;font-size:15px}
 .drop{border:2px dashed var(--line-2);border-radius:var(--r2);
-  padding:24px 18px;text-align:center;cursor:pointer;background:var(--panel-2);
-  display:block;transition:border-color .15s,background .15s;
+  padding:24px 18px;text-align:center;cursor:pointer;
+  background:var(--surface);display:block;
+  transition:border-color .15s,background .15s;
   font-weight:500;color:var(--fg-2)}
 .drop:hover,.drop.over{border-color:var(--accent);background:var(--accent-soft)}
 .drop input{display:none}
@@ -255,7 +263,7 @@ label.inline>input,label.inline>select{width:auto;margin:0}
 /* =========================================================== messages === */
 .note{border-radius:var(--r1);padding:10px 13px;margin:8px 0;font-size:13.5px;
   border:1px solid var(--line);border-inline-start:3px solid var(--line-2);
-  background:var(--panel-2);color:var(--fg-2)}
+  background:var(--surface);color:var(--fg-2)}
 .note b{display:block;color:var(--fg);font-weight:650;margin-bottom:1px}
 .note.ok{border-inline-start-color:var(--ok);background:var(--ok-soft)}
 .note.warn{border-inline-start-color:var(--warn);background:var(--warn-soft)}
@@ -278,8 +286,8 @@ label.inline>input,label.inline>select{width:auto;margin:0}
 
 /* ========================================================== overview ==== */
 .hero{display:flex;gap:20px;align-items:center;flex-wrap:wrap;
-  background:var(--panel);border:1px solid var(--line);
-  border-radius:var(--r3);padding:22px 24px;box-shadow:var(--sh1);
+  background:var(--surface);border:1px solid var(--line);
+  border-radius:var(--r3);padding:22px 24px;
   margin-bottom:16px;position:relative;overflow:hidden}
 .hero::before{content:"";position:absolute;inset-block:0;inset-inline-end:0;
   width:5px;background:var(--accent)}
@@ -298,8 +306,8 @@ label.inline>input,label.inline>select{width:auto;margin:0}
 .steps{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
 .step{flex:1 1 190px;display:flex;gap:11px;align-items:flex-start;
   text-align:start;justify-content:flex-start;padding:13px 15px;
-  background:var(--panel);border:1px solid var(--line);
-  border-radius:var(--r2);box-shadow:var(--sh1);cursor:pointer}
+  background:var(--surface);border:1px solid var(--line);
+  border-radius:var(--r2);cursor:pointer}
 .step:hover{border-color:var(--accent);color:var(--fg)}
 .step .num{width:24px;height:24px;border-radius:50%;flex:none;display:grid;
   place-items:center;font-size:12px;font-weight:700;background:var(--sunk);
@@ -314,8 +322,8 @@ label.inline>input,label.inline>select{width:auto;margin:0}
 
 .stats{display:grid;gap:12px;margin-bottom:16px;
   grid-template-columns:repeat(auto-fit,minmax(148px,1fr))}
-.stat{background:var(--panel);border:1px solid var(--line);
-  border-radius:var(--r2);padding:13px 15px;box-shadow:var(--sh1)}
+.stat{background:var(--surface);border:1px solid var(--line);
+  border-radius:var(--r2);padding:13px 15px}
 .stat b{display:block;font-size:25px;font-weight:720;letter-spacing:-.03em;
   font-variant-numeric:tabular-nums;line-height:1.15}
 .stat span{color:var(--muted);font-size:12px}
@@ -325,8 +333,8 @@ label.inline>input,label.inline>select{width:auto;margin:0}
 
 /* ======================================================== constraints === */
 details.group,details.entity{border:1px solid var(--line);
-  border-radius:var(--r2);margin:0 0 11px;background:var(--panel);
-  overflow:hidden;box-shadow:var(--sh1)}
+  border-radius:var(--r2);margin:0 0 11px;background:var(--surface);
+  overflow:hidden}
 details>summary{padding:13px 16px;cursor:pointer;font-weight:650;
   display:flex;gap:10px;align-items:center;list-style:none}
 details>summary::-webkit-details-marker{display:none}
@@ -335,8 +343,7 @@ details>summary::before{content:"";width:0;height:0;flex:none;
   border-inline-start:5px solid var(--muted);border-block:4px solid transparent;
   transition:transform .16s;transform-origin:30% 50%}
 details[open]>summary::before{transform:rotate(-90deg)}
-details.group>summary{background:var(--panel-2);
-  border-bottom:1px solid var(--line)}
+details.group>summary{border-bottom:1px solid var(--line)}
 details.entity>summary .meta{color:var(--muted);font-weight:400;
   font-size:12.5px;margin-inline-start:auto;text-align:end}
 .rule{border-top:1px solid var(--line);padding:14px 17px}
@@ -419,7 +426,7 @@ td.target{box-shadow:inset 0 0 0 2px var(--accent)}
 /* ========================================================== inspector == */
 .opt{display:flex;gap:10px;align-items:center;padding:9px 11px;
   border:1px solid var(--line);border-radius:var(--r1);margin:6px 0;
-  font-size:13px;background:var(--panel-2)}
+  font-size:13px;background:var(--surface)}
 .opt:hover{border-color:var(--accent-2)}
 .opt b{font-weight:650}
 .opt small{color:var(--muted);display:block;font-size:11.5px;margin-top:1px}
@@ -447,8 +454,8 @@ table.kv thead th{color:var(--muted);font-weight:650;font-size:11.5px;
 table.kv tbody tr:hover{background:var(--panel-2)}
 table.kv td.num{text-align:end;font-variant-numeric:tabular-nums}
 .scroll{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r2);
-  background:var(--panel);box-shadow:var(--sh1);padding:2px 12px 8px}
-pre.sample{background:var(--panel-2);border:1px solid var(--line);
+  background:var(--surface);padding:2px 12px 8px}
+pre.sample{background:var(--surface);border:1px solid var(--line);
   border-radius:var(--r1);padding:13px;overflow:auto;font-size:11.5px;
   max-height:420px;line-height:1.7;margin:6px 0 0;
   font-family:ui-monospace,Consolas,monospace;direction:ltr;text-align:start}
