@@ -13,6 +13,16 @@ APP="$(cd "$(dirname "$0")/.." && pwd)"
 
 command -v caddy >/dev/null || { echo "caddy is not installed"; exit 1; }
 
+# Caddy needs 80 and 443 to itself.  Stop before touching anything if
+# another program holds them: that is usually another site, not ours to
+# replace, and Caddy would fail to start with only a line in its journal.
+taken="$(ss -tlnpH '( sport = :80 or sport = :443 )' | grep -v '"caddy"' || true)"
+if [ -n "$taken" ]; then
+    echo "Ports 80/443 are already used by another program:"
+    echo "$taken"
+    exit 1
+fi
+
 cd "$APP"
 [ -x .venv/bin/python ] || python3 -m venv .venv
 .venv/bin/pip install --quiet --upgrade ortools python-docx
@@ -50,10 +60,11 @@ systemctl restart scheduler
 systemctl reload caddy || systemctl restart caddy
 
 sleep 2
-if systemctl is-active --quiet scheduler; then
-    echo "OK - open https://$DOMAIN"
-else
-    echo "The app did not start. Details:"
-    journalctl -u scheduler -n 30 --no-pager
-    exit 1
-fi
+for unit in scheduler caddy; do
+    if ! systemctl is-active --quiet "$unit"; then
+        echo "$unit did not start. Details:"
+        journalctl -u "$unit" -n 30 --no-pager
+        exit 1
+    fi
+done
+echo "OK - open https://$DOMAIN"
