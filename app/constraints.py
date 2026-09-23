@@ -67,6 +67,95 @@ def priority_name(weight: int) -> str:
 # ----------------------------------------------------------------- entries
 
 @dataclass
+class Field:
+    """One editable parameter of a rule.
+
+    A rule is not only on or off: "at most five hours a day" is a number per
+    teacher, and "these teachers want no window" is a list of names.  Those
+    live in the `SchoolSpec`, so a field is a pair of closures over it —
+    which keeps the knowledge of *where* a value lives next to the rule it
+    belongs to, instead of in a form somewhere else that has to be kept in
+    step.
+
+    `kind` is what the screen draws:
+
+    * `names`   — pick any number from `domain`; value is a list
+    * `numbers` — an optional number per entry of `domain`; value is a map,
+                  and a blank means "no limit", which is not the same as 0
+    * `ranges`  — two numbers per entry, labelled by `parts`
+    * `bools`   — a fixed set of switches, `parts` holding (key, label)
+    * `int`     — one number for the whole school
+    * `flag`    — one switch for the whole school
+    """
+    key: str
+    label: str
+    kind: str
+    get: Callable[[spec_mod.SchoolSpec], Any]
+    put: Callable[[spec_mod.SchoolSpec, Any], None]
+    domain: Callable[[spec_mod.SchoolSpec], list[str]] = lambda s: []
+    parts: tuple = ()
+    help: str = ""
+    minimum: int = 0
+    maximum: int = 20
+
+
+def _teachers(s):
+    return s.teacher_names
+
+
+def _classes(s):
+    return s.class_names
+
+
+def _subjects(s):
+    return s.subjects
+
+
+def _days(s):
+    return list(s.grid.days)
+
+
+def _homerooms(s):
+    return [c.name for c in s.classes if s.homeroom_of(c.name)]
+
+
+def _set_list(attr):
+    """Replace a plain list on `rules`.
+
+    Unknown names never reach here: `apply_fields` refuses them against the
+    field's `domain` first, so a typo is an error rather than a quiet drop.
+    """
+    def put(spec, value):
+        setattr(spec.rules, attr, [str(v) for v in value])
+    return put
+
+
+def _teacher_number(attr):
+    """A per-teacher number, where blank means the limit does not apply."""
+    def get(spec):
+        return {t.name: getattr(t, attr) for t in spec.teachers}
+
+    def put(spec, value):
+        for t in spec.teachers:
+            if t.name in value:
+                raw = value[t.name]
+                setattr(t, attr, None if raw in (None, "") else int(raw))
+    return get, put
+
+
+def _day_list(attr):
+    """Days are indices in the engine and names on the screen."""
+    def get(spec):
+        return [spec.grid.days[int(d)] for d in getattr(spec.rules, attr)
+                if 0 <= int(d) < len(spec.grid.days)]
+
+    def put(spec, value):
+        setattr(spec.rules, attr,
+                sorted({spec.grid.index(v) for v in value}))
+    return get, put
+
+
+@dataclass
 class Constraint:
     id: str
     category: str
@@ -84,6 +173,11 @@ class Constraint:
     scope: Callable[[spec_mod.SchoolSpec], list[str]] = lambda s: []
     #: A rule with no lever at all: listed, explained, never switchable.
     locked: bool = False
+    #: The parameters of the rule, editable on the constraint screen.  A rule
+    #: with none is one whose shape comes from the uploaded files — the
+    #: hand-placed lessons, the parallel-teaching groups — and the screen
+    #: says so rather than offering a form that could only half work.
+    fields: tuple = ()
 
     @property
     def switchable(self) -> bool:
@@ -169,20 +263,33 @@ CATALOGUE: list[Constraint] = [
         "מספר השעות המרבי שמורה מלמדת ביום אחד.",
         relax_key="max_per_day",
         scope=lambda s: [t.name for t in s.teachers
-                         if t.max_per_day is not None]),
+                         if t.max_per_day is not None],
+        fields=(Field("max_per_day", "תקרת שעות ליום", "numbers",
+                      *_teacher_number("max_per_day"), domain=_teachers,
+                      minimum=1, maximum=14,
+                      help="ריק = אין תקרה למורה הזו."),)),
     Constraint(
         "teacher_min_per_day", TEACHER, "רצפת שעות ליום עבודה",
         "מורה אינה מגיעה לבית הספר עבור שיעור אחד או שניים. מי שהותר לה "
         "יום של שעתיים לא תבזבז אותו על סוף היום.",
         locked=True,
-        scope=lambda s: [f"{t.name} ({t.min_per_day})" for t in s.teachers]),
+        scope=lambda s: [f"{t.name} ({t.min_per_day})" for t in s.teachers],
+        fields=(Field("min_per_day", "רצפת שעות ליום עבודה", "numbers",
+                      *_teacher_number("min_per_day"), domain=_teachers,
+                      minimum=1, maximum=8,
+                      help="הכלל עצמו קבוע, אבל המספר לכל מורה ניתן "
+                           "לשינוי. 3 הוא ברירת המחדל."),)),
     Constraint(
         "teacher_working_days", TEACHER, "מספר ימי עבודה מדויק",
         "מורה שהיקף משרתה קובע לה מספר ימים — שלושה, ארבעה — תעבוד בדיוק "
         "כך.",
         relax_key="working_days",
         scope=lambda s: [t.name for t in s.teachers
-                         if t.exact_working_days is not None]),
+                         if t.exact_working_days is not None],
+        fields=(Field("exact_working_days", "מספר ימי עבודה", "numbers",
+                      *_teacher_number("exact_working_days"),
+                      domain=_teachers, minimum=1, maximum=7,
+                      help="ריק = מספר הימים נקבע מהשיבוץ."),)),
     Constraint(
         "distinct_off", TEACHER, "מורות שאינן יכולות להיעדר באותו יום",
         "זוגות מורות שחייבות יום חופש שונה — בדרך כלל מפני שהן מכסות זו "
@@ -194,7 +301,15 @@ CATALOGUE: list[Constraint] = [
         "חלון הוא שעה פנויה שיש לפניה ואחריה שיעור. הכלל מתיר לכל מורה "
         "חלון אחד בשבוע; למחנכת מותר שני חלונות, והשני מתומחר כדי שיישאר "
         "חריג.",
-        relax_key="gaps"),
+        relax_key="gaps",
+        fields=(Field("homeroom_max_windows", "תקרת חלונות למחנכת", "int",
+                      lambda s: s.rules.homeroom_max_windows,
+                      lambda s, v: setattr(s.rules, "homeroom_max_windows",
+                                           max(0, int(v))),
+                      minimum=0, maximum=5),
+                Field("max_windows", "תקרת חלונות למורה שאינה מחנכת",
+                      "numbers", *_teacher_number("max_windows"),
+                      domain=_teachers, minimum=0, maximum=5))),
     Constraint(
         "window_on_longest_day", TEACHER, "חלון רק ביום הארוך ביותר",
         "חלון קיים כדי לנוח, וזה אומר משהו רק ביום ארוך. לכן כל חלון חייב "
@@ -211,20 +326,33 @@ CATALOGUE: list[Constraint] = [
         kind="soft",
         labels=_label("חלון לרוב המורות", "מורה ללא חלון כלל",
                       "חלון שני למחנכת", "חלונות"),
-        default_weight=solver.W_STRONG),
+        default_weight=solver.W_STRONG,
+        fields=(Field("window_majority", "לשאוף לחלון לרוב המורות", "flag",
+                      lambda s: bool(s.rules.window_majority),
+                      lambda s, v: setattr(s.rules, "window_majority",
+                                           bool(v)),
+                      help="כבוי = המערכת תנסה למזער חלונות במקום לחלק "
+                           "אותם."),)),
     Constraint(
         "no_window_teachers", TEACHER, "מורות שביקשו לא לקבל חלון כלל",
         "תקרה של אפס חלונות. בניגוד לדרישת חלון, תקרה כזו תמיד אפשרית — "
         "פשוט דוחסים את היום — ולכן היא קשיחה. מורה כזו גם אינה נספרת "
         "ביעד 'חלון לרוב המורות'.",
-        relax_key="no_window", scope=_names("no_window_teachers")),
+        relax_key="no_window", scope=_names("no_window_teachers"),
+        fields=(Field("no_window_teachers", "מורות שביקשו ללא חלון", "names",
+                      lambda s: list(s.rules.no_window_teachers),
+                      _set_list("no_window_teachers"), domain=_teachers),)),
     Constraint(
         "teacher_long_days", TEACHER, "תקרת ימים ארוכים",
         "מורה שהוגבלה למספר ימים ארוכים בשבוע (יום ארוך = מספר השעות "
         "שהוגדר בלוח הזמנים של בית הספר).",
         relax_key="long_days",
         scope=lambda s: [t.name for t in s.teachers
-                         if t.max_long_days is not None]),
+                         if t.max_long_days is not None],
+        fields=(Field("max_long_days", "מקסימום ימים ארוכים", "numbers",
+                      *_teacher_number("max_long_days"), domain=_teachers,
+                      minimum=0, maximum=7,
+                      help="ריק = ללא הגבלה."),)),
     Constraint(
         "teacher_late_days", TEACHER, "ימים המסתיימים מאוחר",
         "כמה ימים בשבוע המורה מלמדת עד השעות האחרונות — תקרה למי שביקשה "
@@ -233,7 +361,13 @@ CATALOGUE: list[Constraint] = [
         labels=_label("סיום מאוחר: מספר ימים חסר"),
         default_weight=solver.W_MANDATORY,
         scope=lambda s: [t.name for t in s.teachers
-                         if t.min_late_days or t.max_late_days is not None]),
+                         if t.min_late_days or t.max_late_days is not None],
+        fields=(Field("min_late_days", "מינימום ימי סיום מאוחר", "numbers",
+                      *_teacher_number("min_late_days"), domain=_teachers,
+                      minimum=0, maximum=6),
+                Field("max_late_days", "מקסימום ימי סיום מאוחר", "numbers",
+                      *_teacher_number("max_late_days"), domain=_teachers,
+                      minimum=0, maximum=6, help="ריק = ללא הגבלה."))),
     Constraint(
         "same_class_five", TEACHER, "עד חמש שעות עם אותה כיתה ביום",
         "מורה לא תלמד את אותה כיתה יותר מחמש שעות ביום אחד.",
@@ -243,7 +377,12 @@ CATALOGUE: list[Constraint] = [
         "איזון בין ימים ארוכים לקצרים — שני ימים של עד ארבע שעות לכל מורה, "
         "פרט למי שהוחרגה מהעדפה זו.",
         kind="soft", labels=_label("פיזור: 2 ימים קצרים למורה"),
-        default_weight=solver.W_MINOR),
+        default_weight=solver.W_MINOR,
+        fields=(Field("no_spread_preference", "מורות שמוחרגות מהפיזור",
+                      "names", lambda s: list(s.rules.no_spread_preference),
+                      _set_list("no_spread_preference"), domain=_teachers,
+                      help="מי שמסומנת כאן לא תישפט על חלוקת ימים ארוכים "
+                           "וקצרים."),)),
 
     # ------------------------------------------------------------- classes
     Constraint(
@@ -251,7 +390,10 @@ CATALOGUE: list[Constraint] = [
         "כיתה שהיום שלה יכול להימשך עד השעה השביעית תקבל לפחות יום אחד "
         "של חמש שעות.",
         kind="soft", labels=_label("יום קצר אחד לכיתה"),
-        default_weight=solver.W_STRONG, scope=_names("prefer_one_short_day")),
+        default_weight=solver.W_STRONG, scope=_names("prefer_one_short_day"),
+        fields=(Field("prefer_one_short_day", "כיתות שיקבלו יום קצר", "names",
+                      lambda s: list(s.rules.prefer_one_short_day),
+                      _set_list("prefer_one_short_day"), domain=_classes),)),
     Constraint(
         "pinned_lessons", CLASS, "שיעורים שבית הספר קבע בעצמו",
         "שיעור שהוצב ידנית ביום ובשעה מסוימים, ויום שנקבע לו סוף מוקדם. "
@@ -284,7 +426,10 @@ CATALOGUE: list[Constraint] = [
         "העדפה בלבד: המקצוע יימנע מהשעה הראשונה אם אפשר.",
         kind="soft",
         labels=lambda s: [f"{x} בשעה ראשונה" for x in s.rules.not_first_period],
-        default_weight=solver.W_PREFER, scope=_names("not_first_period")),
+        default_weight=solver.W_PREFER, scope=_names("not_first_period"),
+        fields=(Field("not_first_period", "מקצועות שלא בשעה הראשונה", "names",
+                      lambda s: list(s.rules.not_first_period),
+                      _set_list("not_first_period"), domain=_subjects),)),
     Constraint(
         "subject_ends_day", OTHER, "מקצוע שהוא סוף היום של המורה",
         "שיעור שאחריו המורה אינה מלמדת עוד באותו יום. נאמר על היום שלה, "
@@ -309,7 +454,15 @@ CATALOGUE: list[Constraint] = [
         kind="soft",
         labels=_label("מחנכת פותחת את היום בכיתתה",
                       "מחנכת: פתיחה מועדפת נוספת"),
-        default_weight=solver.W_MANDATORY, scope=_names("open_own_class")),
+        default_weight=solver.W_MANDATORY, scope=_names("open_own_class"),
+        fields=(Field("open_own_class", "כמה ימים המחנכת פותחת", "ranges",
+                      lambda s: {k: list(v)
+                                 for k, v in s.rules.open_own_class.items()},
+                      lambda s, v: setattr(
+                          s.rules, "open_own_class",
+                          {k: [int(x[0]), int(x[1])] for k, x in v.items()}),
+                      domain=_homerooms, parts=("נדרש", "מועדף"),
+                      minimum=0, maximum=7),)),
     Constraint(
         "open_on_day", SCHOOL, "יום פתיחה שנקבע בשם",
         "יום מסוים שבו מחנכת חייבת לפתוח את כיתתה — למשל תחילת השבוע. "
@@ -324,6 +477,14 @@ CATALOGUE: list[Constraint] = [
         "ואפשרות לדרוש שיהיה יומה הארוך ביותר. כל רכיב מתומחר בנפרד כדי "
         "שדוח העונשין יגיד איזו מחנכת ואיזה רכיב.",
         kind="soft", relax_key="fifth_day",
+        fields=(Field("fifth_day", "רכיבי היום החמישי", "bools",
+                      lambda s: dict(s.rules.fifth_day),
+                      lambda s, v: s.rules.fifth_day.update(
+                          {k: bool(x) for k, x in v.items()}),
+                      parts=(("late_start", "אינה מלמדת שעה ראשונה"),
+                             ("late_end", "מסיימת בשעה האחרונה של הכיתה"),
+                             ("window", "החלון השבועי נופל ביום הזה"),
+                             ("longest", "זהו יומה הארוך ביותר"))),),
         labels=_label("יום חמישי: מתחילה מאוחר",
                       "יום חמישי: מסיימת בשעה האחרונה של הכיתה",
                       "יום חמישי: חלון ביום זה",
@@ -334,7 +495,10 @@ CATALOGUE: list[Constraint] = [
         "למחנכות שנקבע להן כך: לפחות יום אחד בשבוע שאינו מתחיל בשעה "
         "הראשונה וגם אינו נגמר מוקדם.",
         kind="soft", labels=_label("מחנכת: יום שמתחיל מאוחר ומסתיים מאוחר"),
-        default_weight=solver.W_MANDATORY, scope=_names("late_start_and_end")),
+        default_weight=solver.W_MANDATORY, scope=_names("late_start_and_end"),
+        fields=(Field("late_start_and_end", "מחנכות שהכלל חל עליהן", "names",
+                      lambda s: list(s.rules.late_start_and_end),
+                      _set_list("late_start_and_end"), domain=_teachers),)),
     Constraint(
         "late_start_only", SCHOOL, "התחלה מאוחרת פעם בשבוע",
         "מורה שביקשה יום אחד המתחיל בשעה שנייה או שלישית.",
@@ -347,7 +511,12 @@ CATALOGUE: list[Constraint] = [
         "הצדדים, מפני שהנימוק הוא הכיתה ולא המורה.",
         kind="soft", labels=_label("מחנכת: התחלה מאוחרת בצמוד ליום חופש"),
         default_weight=solver.W_MANDATORY,
-        scope=_names("late_start_away_from_off")),
+        scope=_names("late_start_away_from_off"),
+        fields=(Field("late_start_away_from_off", "מחנכות שהכלל חל עליהן",
+                      "names",
+                      lambda s: list(s.rules.late_start_away_from_off),
+                      _set_list("late_start_away_from_off"),
+                      domain=_teachers),)),
     Constraint(
         "no_last_period_on", SCHOOL, "מחנכת בשעה האחרונה ביום שנקבע",
         "רצוי מאוד שמחנכת לא תלמד את השעה האחרונה ביום שסומן. רצוי — לא "
@@ -356,7 +525,9 @@ CATALOGUE: list[Constraint] = [
         labels=lambda s: [f"מחנכת בשעה האחרונה ביום {s.grid.days[d]}"
                           for d in s.rules.no_seventh_on],
         default_weight=solver.W_STRONG,
-        scope=lambda s: [s.grid.days[d] for d in s.rules.no_seventh_on]),
+        scope=lambda s: [s.grid.days[d] for d in s.rules.no_seventh_on],
+        fields=(Field("no_seventh_on", "הימים שהכלל חל עליהם", "names",
+                      *_day_list("no_seventh_on"), domain=_days),)),
     Constraint(
         "anchor", OTHER, "היצמדות למערכת שאושרה",
         "כששואלים את המערכת שאלה חדשה על מערכת קיימת, כל שיעור שזז מהמקום "
@@ -461,10 +632,46 @@ def listing(spec: spec_mod.SchoolSpec, settings: Settings) -> list[dict]:
                 "labels": c.labels(spec),
                 "scope": scope,
                 "applies": len(scope),
+                "fields": [{
+                    "key": f.key, "label": f.label, "kind": f.kind,
+                    "help": f.help, "domain": f.domain(spec),
+                    "parts": [list(p) if isinstance(p, tuple) else p
+                              for p in f.parts],
+                    "min": f.minimum, "max": f.maximum,
+                    "value": f.get(spec),
+                } for f in c.fields],
             })
         groups.append({"id": cat, "title": CATEGORY_TITLES[cat],
                        "constraints": items})
     return groups
+
+
+def apply_fields(spec: spec_mod.SchoolSpec, constraint_id: str,
+                 values: dict) -> list[str]:
+    """Write edited parameters back into the school.
+
+    Returns what the change made invalid, or an empty list.  The check runs
+    *after* the write and before the caller saves, so a name that no longer
+    exists or a floor above a ceiling is refused as a whole rather than
+    leaving the school half-edited — which is why the caller hands in a copy
+    of the spec and keeps it only if this comes back empty.
+    """
+    c = BY_ID.get(constraint_id)
+    if c is None:
+        raise KeyError(f"אין אילוץ בשם {constraint_id}")
+    known = {f.key: f for f in c.fields}
+    for key, value in (values or {}).items():
+        field = known.get(key)
+        if field is None:
+            raise ValueError(f"{c.title}: אין פרמטר בשם {key}")
+        if field.kind == "names":
+            allowed = set(field.domain(spec))
+            unknown = [v for v in value if v not in allowed]
+            if unknown:
+                raise ValueError(f"{field.label}: {', '.join(unknown)} "
+                                 f"אינם קיימים בבית הספר")
+        field.put(spec, value)
+    return spec.problems()
 
 
 def by_label(spec: spec_mod.SchoolSpec) -> dict[str, Constraint]:

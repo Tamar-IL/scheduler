@@ -262,9 +262,21 @@ class Api:
     def post_constraints(self, payload) -> dict:
         project = self.project(payload["id"])
         try:
-            project.settings.set(payload["constraint"],
-                                 enabled=payload.get("enabled"),
-                                 weight=payload.get("weight"))
+            if payload.get("enabled") is not None \
+                    or payload.get("weight") is not None:
+                project.settings.set(payload["constraint"],
+                                     enabled=payload.get("enabled"),
+                                     weight=payload.get("weight"))
+            if payload.get("params"):
+                # Edited onto a copy: `apply_fields` reports what the change
+                # broke, and a school that fails its own consistency check
+                # must not be the one that gets saved.
+                draft = project.spec.copy()
+                problems = cat.apply_fields(draft, payload["constraint"],
+                                            payload["params"])
+                if problems:
+                    raise HttpError(400, " · ".join(problems[:4]))
+                project.spec = draft
         except (KeyError, ValueError) as exc:
             raise HttpError(400, str(exc)) from exc
         self.store.save(project)
@@ -492,17 +504,24 @@ class Handler(http.server.BaseHTTPRequestHandler):
     def _set_cookie(self, token: str | None) -> None:
         """Sessions live in an HttpOnly cookie the page cannot read.
 
-        No `Secure`: this runs on http://127.0.0.1, where that flag would
-        stop the cookie being set at all. `SameSite=Strict` and the guard
-        header carry the weight instead.
+        `Secure` only behind a TLS proxy, which says so in
+        `X-Forwarded-Proto`: on plain http://127.0.0.1 the flag would stop
+        the cookie being set at all.  A client forging the header can only
+        make its own cookie stricter, so trusting it costs nothing.
+        `SameSite=Strict` and the guard header carry the weight either way.
         """
+        secure = "; Secure" if self._behind_tls() else ""
         if token:
             self._cookies.append(
                 f"{COOKIE}={token}; Path=/; HttpOnly; SameSite=Strict; "
-                f"Max-Age={users_mod.SESSION_DAYS * 86400}")
+                f"Max-Age={users_mod.SESSION_DAYS * 86400}{secure}")
         else:
             self._cookies.append(f"{COOKIE}=; Path=/; HttpOnly; "
-                                 f"SameSite=Strict; Max-Age=0")
+                                 f"SameSite=Strict; Max-Age=0{secure}")
+
+    def _behind_tls(self) -> bool:
+        proto = self.headers.get("X-Forwarded-Proto", "")
+        return proto.split(",")[0].strip().lower() == "https"
 
     def api_for(self, user) -> Api:
         return self.workspaces.api(user)

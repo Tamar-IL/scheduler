@@ -428,6 +428,52 @@ class TestConstraintScreen(unittest.TestCase):
                    built._penalty_terms["פיזור: 2 ימים קצרים למורה"]}
         self.assertEqual(weights, {solver.W_STRONG})
 
+    def test_every_field_writes_back_what_it_reads(self):
+        """A field whose `put` does not invert its `get` would change the
+        school the moment someone saves a form they did not touch."""
+        spec = activate.capture()
+        before = spec_mod.to_dict(spec)
+        for c in cat.CATALOGUE:
+            if not c.fields:
+                continue
+            values = {f.key: f.get(spec) for f in c.fields}
+            with self.subTest(constraint=c.id):
+                self.assertEqual(cat.apply_fields(spec, c.id, values), [])
+                self.assertEqual(spec_mod.to_dict(spec), before)
+
+    def test_an_edited_name_list_reaches_the_school(self):
+        spec = activate.capture()
+        name = spec.teacher_names[0]
+        cat.apply_fields(spec, "no_window_teachers",
+                         {"no_window_teachers": [name]})
+        self.assertEqual(spec.rules.no_window_teachers, [name])
+
+    def test_a_name_the_school_does_not_have_is_refused(self):
+        spec = activate.capture()
+        with self.assertRaises(ValueError):
+            cat.apply_fields(spec, "no_window_teachers",
+                             {"no_window_teachers": ["אין מורה כזו"]})
+        with self.assertRaises(ValueError):
+            cat.apply_fields(spec, "no_window_teachers", {"no_such_field": []})
+
+    def test_a_refused_edit_leaves_the_saved_school_untouched(self):
+        from app import server
+        api = server.Workspaces(tempfile.mkdtemp(), auth=False).api(None)
+        pid = api.post_demo({})["id"]
+        before = spec_mod.to_dict(api.project(pid).spec)
+        with self.assertRaises(server.HttpError) as caught:
+            api.post_constraints({"id": pid, "constraint": "no_window_teachers",
+                                  "params": {"no_window_teachers":
+                                             ["אין מורה כזו"]}})
+        self.assertEqual(caught.exception.status, 400)
+        self.assertEqual(spec_mod.to_dict(api.project(pid).spec), before)
+
+        name = api.project(pid).spec.teacher_names[0]
+        api.post_constraints({"id": pid, "constraint": "no_window_teachers",
+                              "params": {"no_window_teachers": [name]}})
+        self.assertEqual(api.project(pid).spec.rules.no_window_teachers,
+                         [name])
+
     def test_the_listing_covers_every_category(self):
         spec = activate.capture()
         groups = cat.listing(spec, cat.Settings())
@@ -726,6 +772,28 @@ class TestAccounts(unittest.TestCase):
         self.assertIsNone(self.users.session_user(elsewhere))
         self.assertEqual(self.users.authenticate("rivka",
                                                  "another-good-one").id, user.id)
+
+    def test_the_cookie_is_secure_only_behind_a_tls_proxy(self):
+        """Always-`Secure` would lock out plain http://127.0.0.1; never-
+        `Secure` would let a deployment behind HTTPS leak the session."""
+        import email.message
+        from app import server
+
+        def cookies(proto):
+            handler = server.Handler.__new__(server.Handler)
+            handler.headers = email.message.Message()
+            if proto:
+                handler.headers["X-Forwarded-Proto"] = proto
+            handler._cookies = []
+            handler._set_cookie("token")
+            handler._set_cookie(None)
+            return handler._cookies
+
+        for cookie in cookies("https"):
+            self.assertIn("; Secure", cookie)
+        for proto in ("", "http"):
+            for cookie in cookies(proto):
+                self.assertNotIn("Secure", cookie)
 
     def test_two_accounts_never_see_each_other_schools(self):
         from app import server
