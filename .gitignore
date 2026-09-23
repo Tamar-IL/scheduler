@@ -11,3 +11,7 @@ venv/
 # Scratch
 .DS_Store
 Thumbs.db
+
+# Auto-deploy state on the server
+.deploy-failed
+.deploy-tests.log

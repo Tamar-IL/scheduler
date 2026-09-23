@@ -795,6 +795,31 @@ class TestAccounts(unittest.TestCase):
             for cookie in cookies(proto):
                 self.assertNotIn("Secure", cookie)
 
+    def test_health_says_when_a_solve_is_running(self):
+        """The auto-updater restarts only when this says no solve would be
+        lost, and it asks without an account."""
+        import threading
+        from app import server
+        handler = server.Handler.__new__(server.Handler)
+        handler.workspaces = server.Workspaces(tempfile.mkdtemp(), auth=True)
+        jobs = handler.workspaces.jobs
+        self.assertEqual(handler._route_get("/api/health", {}),
+                         {"busy": False})
+
+        release, started = threading.Event(), threading.Event()
+        job = jobs.start("בדיקה",
+                         lambda report: (started.set(), release.wait(5)))
+        started.wait(5)
+        self.assertEqual(handler._route_get("/api/health", {}),
+                         {"busy": True})
+        release.set()
+        for _ in range(100):
+            if jobs.get(job)["state"] != "running":
+                break
+            threading.Event().wait(0.02)
+        self.assertEqual(handler._route_get("/api/health", {}),
+                         {"busy": False})
+
     def test_two_accounts_never_see_each_other_schools(self):
         from app import server
         root = tempfile.mkdtemp()

@@ -140,6 +140,11 @@ class Jobs:
         threading.Thread(target=run, daemon=True).start()
         return job_id
 
+    @property
+    def busy(self) -> bool:
+        """A solve is running.  Restarting now would lose it silently."""
+        return self._busy.locked()
+
     def get(self, job_id: str) -> dict:
         with self._lock:
             job = self._jobs.get(job_id)
@@ -677,6 +682,10 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
     def _route_get(self, path: str, query: dict):
         parts = [p for p in path.split("/") if p]      # api, …
+        if parts == ["api", "health"]:
+            # Unauthenticated on purpose: the auto-updater asks it before
+            # restarting.  It says only whether *some* solve is running.
+            return {"busy": self.workspaces.jobs.busy}
         answered = self._auth_get(parts)
         if answered is not None:
             return answered

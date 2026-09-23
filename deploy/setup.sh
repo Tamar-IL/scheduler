@@ -90,9 +90,35 @@ RestartSec=5
 WantedBy=multi-user.target
 EOF
 
+# Auto-deploy: every two minutes, deploy/update.sh pulls main, runs the
+# tests, and restarts when no solve is running.
+cat > /etc/systemd/system/scheduler-update.service <<EOF
+[Unit]
+Description=Deploy new commits of the timetable scheduler
+
+[Service]
+Type=oneshot
+WorkingDirectory=$APP
+Environment=HEALTH=http://$HOST:$PORT/api/health
+ExecStart=/bin/bash $APP/deploy/update.sh
+EOF
+
+cat > /etc/systemd/system/scheduler-update.timer <<EOF
+[Unit]
+Description=Check for new commits of the timetable scheduler
+
+[Timer]
+OnBootSec=2min
+OnUnitInactiveSec=2min
+
+[Install]
+WantedBy=timers.target
+EOF
+
 systemctl daemon-reload
 systemctl enable --now scheduler
 systemctl restart scheduler
+systemctl enable --now scheduler-update.timer
 
 # -------------------------------------------------------------- the proxy
 
